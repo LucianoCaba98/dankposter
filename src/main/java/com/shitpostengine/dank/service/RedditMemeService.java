@@ -10,6 +10,7 @@ import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
@@ -40,6 +41,10 @@ public class RedditMemeService {
             return List.of();
         }
 
+        if (!CollectionUtils.isEmpty(memeRepository.findAll())) {
+            memeRepository.deleteAll();
+        }
+
         List<Meme> memes = response.getData().getChildren().stream()
                 .map(RedditChild::getData)
                 .filter(post -> redditPostScoringService.calculateInteractionScore(post) > 0.0)
@@ -53,6 +58,8 @@ public class RedditMemeService {
                 .toList();
 
         memeRepository.saveAll(memes);
+
+        System.out.println("the scheduler has just updated the dank database");
 
         return memeRepository.findAll(Sort.by(Sort.Direction.DESC, "danknessScore"));
 
