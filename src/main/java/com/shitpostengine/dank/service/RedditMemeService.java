@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -22,7 +23,10 @@ public class RedditMemeService {
     private final MemeRepository memeRepository;
     private final RedditPostScoringService redditPostScoringService;
 
-    public List<Meme> fetchMemesFromSubreddit(String subreddit, int limit) {
+    @Scheduled(fixedRateString = "${scheduling.fetch-interval-ms}")
+    public List<Meme> fetchMemesFromSubreddit() {
+        String subreddit = "argentina";
+        int limit = 10;
         String url = String.format("https://www.reddit.com/r/%s/hot.json?limit=%d", subreddit, limit);
 
         RedditResponse response = webClient.get()

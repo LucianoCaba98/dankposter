@@ -20,6 +20,6 @@ public class MemeController {
             @RequestParam(defaultValue = "ArgentinaBenderStyle") String subreddit,
             @RequestParam(defaultValue = "500") int limit
     ) {
-        return redditMemeService.fetchMemesFromSubreddit(subreddit, limit);
+        return redditMemeService.fetchMemesFromSubreddit();
     }
 }
