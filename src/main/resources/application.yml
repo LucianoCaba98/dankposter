@@ -1,8 +1,19 @@
 server:
   port: 8080
 
+reddit:
+  subreddits:
+    - name: argentina
+      limit: 5
+    - name: memes
+      limit: 5
+    - name: shitposting
+      limit: 5
+    - name : ArgentinaBenderStyle
+      limit : 5
+
 scheduling:
-   fetch-interval-ms: 60000
+   fetch-interval-ms: 1800000
 
 spring:
   datasource:

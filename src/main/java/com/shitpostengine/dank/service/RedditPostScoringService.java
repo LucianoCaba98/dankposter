@@ -14,14 +14,14 @@ public class RedditPostScoringService {
         }
 
         double upvoteWeight = 1.0;
-        double commentWeight = 1.5;
-        double awardWeight = 0;
+        double commentWeight = 2.0;
+        double awardWeight = 3.0;
 
         double score = post.getUpvotes() * upvoteWeight +
                 post.getCommentCount() * commentWeight +
                 post.getAwardCount() * awardWeight;
 
-        if (score < 0) {
+        if (score < 100) {
             return 0.0;
         }
 
