@@ -14,3 +14,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+discord:
+  bot-token: "MTM4NDI3MjY4NTUxMjUyMzg0Nw.GXJI4t.4TO2qytq9V8EK0Pxh0v2xC7_-OORbuV8wmpn84"
+  channel-id: "851515512525029388"
