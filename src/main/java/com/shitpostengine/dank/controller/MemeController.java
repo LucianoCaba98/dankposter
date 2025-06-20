@@ -15,10 +15,7 @@ public class MemeController {
     private final RedditMemeService redditMemeService;
 
     @PostMapping("/fetch")
-    public List<Meme> fetchMemes(
-            @RequestParam(defaultValue = "ArgentinaBenderStyle") String subreddit,
-            @RequestParam(defaultValue = "500") int limit
-    ) {
-        return redditMemeService.fetchMemesFromSubreddit(subreddit, limit);
+    public List<Meme> fetchMemes() {
+        return redditMemeService.fetchMemesFromSubreddit();
     }
 }
