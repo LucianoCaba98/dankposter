@@ -6,12 +6,12 @@ import com.shitpostengine.dank.model.Meme;
 import com.shitpostengine.dank.repository.MemeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +32,11 @@ public class RedditMemeService {
                 .block();
 
         if (response == null || response.getData() == null) {
-            System.out.println("No data received from Reddit");
+            log.warn("No data received from Reddit for subreddit: {}", subreddit);
             return List.of();
         }
 
-        List<Meme> memes = response.getData().getChildren().stream()
+        List<Meme> newMemes = response.getData().getChildren().stream()
                 .map(RedditChild::getData)
                 .filter(post -> redditPostScoringService.calculateInteractionScore(post) > 0.0)
                 .map(post -> Meme.builder()
@@ -46,12 +46,12 @@ public class RedditMemeService {
                         .description(post.getDescription())
                         .posted(false)
                         .build())
-                .toList();
+                .filter(meme -> !memeRepository.existsByTitle(meme.getTitle()))
+                .collect(Collectors.toList());
 
-        memeRepository.saveAll(memes);
+        memeRepository.saveAll(newMemes);
+        log.info("Saved {} new memes from r/{}", newMemes.size(), subreddit);
 
         return memeRepository.findAll(Sort.by(Sort.Direction.DESC, "danknessScore"));
-
-
     }
 }

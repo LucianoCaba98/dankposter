@@ -1,7 +1,6 @@
 package com.shitpostengine.dank.controller;
 
 import com.shitpostengine.dank.model.Meme;
-import com.shitpostengine.dank.service.MemeService;
 import com.shitpostengine.dank.service.RedditMemeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
