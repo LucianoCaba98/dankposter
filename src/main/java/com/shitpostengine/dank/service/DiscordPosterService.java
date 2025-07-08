@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 
@@ -19,11 +20,6 @@ public class DiscordPosterService {
 
     private final MemeRepository memeRepository;
     private final DiscordConfig discordConfig;
-
-    private final WebClient webClient = WebClient.builder()
-            .baseUrl("https://discord.com/api")
-            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .build();
 
     public void postNextUnpostedMeme() {
         Optional<Meme> memeOpt = memeRepository.findFirstByPostedFalseOrderByDanknessScoreDesc();
@@ -36,9 +32,14 @@ public class DiscordPosterService {
         Meme meme = memeOpt.get();
         String message = String.format("🔥 **%s**\n%s", meme.getTitle(), meme.getImageUrl());
 
+        WebClient webClient = WebClient.builder()
+                .baseUrl("https://discord.com/api")
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bot " + discordConfig.getBotToken())
+                .build();
+
         webClient.post()
                 .uri("/channels/{channelId}/messages", discordConfig.getChannelId())
-                .headers(headers -> headers.setBearerAuth(discordConfig.getBotToken()))
                 .bodyValue(new DiscordMessage(message))
                 .retrieve()
                 .bodyToMono(String.class)

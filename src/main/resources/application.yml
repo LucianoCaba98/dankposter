@@ -13,7 +13,8 @@ reddit:
       limit : 5
 
 scheduling:
-   fetch-interval-ms: 1800000
+  fetch-interval-ms: 30000      # 30 seconds
+  post-interval-ms: 30100      # 30.1 seconds
 
 spring:
   datasource:
@@ -30,5 +31,5 @@ spring:
     show-sql: true
 
 discord:
-  bot-token: "MTM4NDI3MjY4NTUxMjUyMzg0Nw.GXJI4t.4TO2qytq9V8EK0Pxh0v2xC7_-OORbuV8wmpn84"
-  channel-id: "1384302033385033748"
+  bot-token: "MTM4NDI3MjY4NTUxMjUyMzg0Nw.GRluGM.lk0S7RH6VK6OZ-4xIVzxKzcFhJpU8ZFi1AE7NA"
+  channel-id: "1384302033385033751"
