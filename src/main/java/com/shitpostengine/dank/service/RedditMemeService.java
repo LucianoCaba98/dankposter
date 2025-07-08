@@ -29,13 +29,7 @@ public class RedditMemeService {
     private final RedditPostScoringService redditPostScoringService;
     private final RedditProperties redditProperties;
 
-    @Scheduled(fixedRateString = "${scheduling.fetch-interval-ms}")
     public List<Meme> fetchMemesFromSubreddit() {
-
-        if (!CollectionUtils.isEmpty(memeRepository.findAll())) {
-            memeRepository.deleteAll();
-        }
-
         List<Meme> allMemes = redditProperties.getSubreddits().stream()
                 .flatMap(subreddit -> {
                     String url = String.format("https://www.reddit.com/r/%s/hot.json?limit=%d",
