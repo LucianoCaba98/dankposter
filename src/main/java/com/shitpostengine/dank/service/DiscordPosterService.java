@@ -30,6 +30,14 @@ public class DiscordPosterService {
         }
 
         Meme meme = memeOpt.get();
+
+        if (memeRepository.existsByImageUrlAndPostedTrue(meme.getImageUrl())) {
+            log.warn("Skipping duplicate meme: {}", meme.getImageUrl());
+            meme.setPosted(true);
+            memeRepository.save(meme);
+            return;
+        }
+
         String message = String.format("🔥 **%s**\n%s", meme.getTitle(), meme.getImageUrl());
 
         WebClient webClient = WebClient.builder()

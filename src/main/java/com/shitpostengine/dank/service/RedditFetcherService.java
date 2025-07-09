@@ -8,28 +8,24 @@ import com.shitpostengine.dank.repository.MemeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toList;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class RedditMemeService {
+public class RedditFetcherService {
 
     private final WebClient webClient;
     private final MemeRepository memeRepository;
     private final RedditPostScoringService redditPostScoringService;
     private final RedditProperties redditProperties;
 
-    public List<Meme> fetchMemesFromSubreddit() {
+    public void fetchMemesFromSubreddit() {
         List<Meme> allMemes = redditProperties.getSubreddits().stream()
                 .flatMap(subreddit -> {
                     String url = String.format("https://www.reddit.com/r/%s/hot.json?limit=%d",
@@ -43,7 +39,7 @@ public class RedditMemeService {
 
                     if (response == null || response.getData() == null) {
                         log.warn("No data from r/{}", subreddit.getName());
-                        return List.<Meme>of().stream();
+                        return Stream.of();
                     }
 
 
@@ -51,6 +47,7 @@ public class RedditMemeService {
                             .map(RedditChild::getData)
                             .filter(post -> redditPostScoringService.calculateInteractionScore(post) > 0.0)
                             .map(post -> Meme.builder()
+                                    .redditId(post.getId())
                                     .title(post.getTitle())
                                     .imageUrl(post.getUrl())
                                     .danknessScore(redditPostScoringService.calculateInteractionScore(post))
@@ -62,10 +59,14 @@ public class RedditMemeService {
                 .sorted(Comparator.comparingDouble(Meme::getDanknessScore).reversed())
                 .toList();
 
-        memeRepository.saveAll(allMemes);
+        List<Meme> memesToSave = allMemes.stream()
+                .filter(meme -> !memeRepository.existsByRedditId(meme.getRedditId()))
+                .toList();
+
+        memeRepository.saveAll(memesToSave);
+
         log.info("🔥 Scheduler updated memes from {} subreddits", redditProperties.getSubreddits().size());
 
-        return memeRepository.findAll(Sort.by(Sort.Direction.DESC, "danknessScore"));
-
+        memeRepository.findAll(Sort.by(Sort.Direction.DESC, "danknessScore"));
     }
 }

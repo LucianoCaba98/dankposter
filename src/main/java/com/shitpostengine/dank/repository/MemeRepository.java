@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface MemeRepository extends JpaRepository<Meme, Long> {
     boolean existsByTitle(String title);
     Optional<Meme> findFirstByPostedFalseOrderByDanknessScoreDesc();
+    boolean existsByRedditId(String redditId);
+    boolean existsByImageUrlAndPostedTrue(String imageUrl);
 }

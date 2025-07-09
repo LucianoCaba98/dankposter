@@ -14,6 +14,9 @@ public class Meme {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true)
+    private String redditId;
+
     private String title;
     private String imageUrl;
     private Double danknessScore;
