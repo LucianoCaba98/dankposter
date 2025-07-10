@@ -21,7 +21,7 @@ public class RedditPostScoringService {
                 post.getCommentCount() * commentWeight +
                 post.getAwardCount() * awardWeight;
 
-        if (score < 100) {
+        if (score < 0) {
             return 0.0;
         }
 

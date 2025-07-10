@@ -1,6 +1,7 @@
 package com.shitpostengine.dank.dto.reddit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
 import lombok.Data;
 
 
@@ -8,6 +9,9 @@ import lombok.Data;
 public class RedditPost {
     private String title;
     private String url;
+
+    @Column(unique = true)
+    private String id;
 
     @JsonProperty("ups")
     private int upvotes;
@@ -33,4 +37,3 @@ public class RedditPost {
     @JsonProperty("subreddit")
     private String subreddit;
 }
-

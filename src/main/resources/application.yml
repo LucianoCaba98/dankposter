@@ -4,16 +4,17 @@ server:
 reddit:
   subreddits:
     - name: argentina
-      limit: 5
+      limit: 25
     - name: memes
-      limit: 5
+      limit: 25
     - name: shitposting
-      limit: 5
+      limit: 25
     - name : ArgentinaBenderStyle
-      limit : 5
+      limit : 25
 
 scheduling:
-   fetch-interval-ms: 1800000
+  fetch-interval-ms: 150000      # 2.5 minutes = 2 min 30 sec
+  post-interval-ms: 15000        # 30 seconds
 
 spring:
   datasource:
@@ -28,3 +29,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+discord:
+  bot-token: "MTM4NDI3MjY4NTUxMjUyMzg0Nw.GRluGM.lk0S7RH6VK6OZ-4xIVzxKzcFhJpU8ZFi1AE7NA"
+  channel-id: "1384302033385033751"
