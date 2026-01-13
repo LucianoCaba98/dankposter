@@ -20,6 +20,7 @@ public class RedditFetcherService {
     private final RedditProperties redditProperties;
 
     public Flux<Meme> fetch() {
+        log.info("fetching memes #hard");
         return Flux.fromIterable(redditProperties.getSubreddits())
 
                 .flatMap(source -> {
