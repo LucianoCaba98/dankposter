@@ -4,6 +4,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@Table(
+        name = "memes",
+        uniqueConstraints = @UniqueConstraint(columnNames = "reddit_id")
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,13 +18,14 @@ public class Meme {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(name = "reddit_id", nullable = false, unique = true)
     private String redditId;
+    @Enumerated(EnumType.STRING)
+    private MemeStatus status;
 
     private String title;
     private String imageUrl;
     private Double danknessScore;
-    private boolean posted;
     @Lob
     private String description;
 

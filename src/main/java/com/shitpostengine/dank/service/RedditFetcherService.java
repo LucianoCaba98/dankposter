@@ -4,6 +4,7 @@ import com.shitpostengine.dank.config.RedditProperties;
 import com.shitpostengine.dank.dto.reddit.RedditChild;
 import com.shitpostengine.dank.dto.reddit.RedditResponse;
 import com.shitpostengine.dank.model.Meme;
+import com.shitpostengine.dank.model.MemeStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class RedditFetcherService {
                         .description(meme.getDescription())
                         .title(meme.getTitle())
                         .imageUrl(meme.getUrl())
+                        .status(MemeStatus.FETCHED)
                         .build());
     }
 }
