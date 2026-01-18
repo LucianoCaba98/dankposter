@@ -25,6 +25,8 @@ public class DiscordPosterService {
 
         WebClient webClient = WebClient.builder()
                 .baseUrl("https://discord.com/api")
+                .defaultHeader(HttpHeaders.USER_AGENT,
+                        "DankPosterBot/1.0 (by u/LucianoCaba98)")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bot " + discordConfig.getBotToken())
                 .build();
