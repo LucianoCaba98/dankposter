@@ -5,6 +5,7 @@ import com.shitpostengine.dank.model.MemeStatus;
 import com.shitpostengine.dank.repository.MemeRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -31,26 +32,25 @@ public class MemeFetchPipeline {
         Flux.interval(Duration.ofSeconds(30))
                 .flatMap(tick -> redditFetcherService.fetch())
                 .flatMap(meme ->
-                        Mono.fromCallable(() -> memeRepository.existsByRedditId(meme.getRedditId()))
+                        Mono.fromCallable(() -> memeRepository.save(meme))
                                 .subscribeOn(Schedulers.boundedElastic())
-                                .flatMap(existing -> Mono.empty())
-                                .switchIfEmpty(
-                                        Mono.fromCallable(() -> memeRepository.save(meme))
-                                                .subscribeOn(Schedulers.boundedElastic())
-                                )
+                                .onErrorResume(DataIntegrityViolationException.class, e -> {
+                            log.debug("Duplicate!: {}", meme.getRedditId());
+                            return Mono.empty();
+                        })
                 )
-                .filter(meme -> ((Meme) meme).getStatus() == MemeStatus.FETCHED)
+                .filter(meme -> meme.getStatus() == MemeStatus.FETCHED)
                 .delayElements(Duration.ofSeconds(2))
                 .concatMap( meme ->
-                        discordPosterService.post((Meme) meme)
+                        discordPosterService.post(meme)
                                 .flatMap(posted -> {
                                     posted.setStatus(MemeStatus.POSTED);
                                     return Mono.fromCallable(() -> memeRepository.save(posted))
                                             .subscribeOn(Schedulers.boundedElastic());
                                 })
                                 .onErrorResume(e -> {
-                                    ((Meme) meme).setStatus(MemeStatus.FAILED);
-                                    return Mono.fromCallable(() -> memeRepository.save((Meme) meme))
+                                    (meme).setStatus(MemeStatus.FAILED);
+                                    return Mono.fromCallable(() -> memeRepository.save(meme))
                                             .subscribeOn(Schedulers.boundedElastic())
                                             .then(Mono.empty());
                                 }))
