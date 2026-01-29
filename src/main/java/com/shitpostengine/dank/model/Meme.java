@@ -6,7 +6,7 @@ import lombok.*;
 @Entity
 @Table(
         name = "memes",
-        uniqueConstraints = @UniqueConstraint(columnNames = "reddit_id")
+        uniqueConstraints = @UniqueConstraint(columnNames = "external_id")
 )
 @Data
 @NoArgsConstructor
@@ -18,10 +18,13 @@ public class Meme {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "reddit_id", nullable = false, unique = true)
-    private String redditId;
+    @Column(name = "external_id", nullable = false, unique = true)
+    private String externalId;
     @Enumerated(EnumType.STRING)
     private MemeStatus status;
+
+    @Enumerated(EnumType.STRING)
+    private Source source;
 
     private String title;
     private String imageUrl;
@@ -32,13 +35,12 @@ public class Meme {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Meme meme = (Meme) o;
-        return title != null && title.equals(meme.title);
+        if (!(o instanceof Meme meme)) return false;
+        return externalId != null && externalId.equals(meme.externalId);
     }
 
     @Override
     public int hashCode() {
-        return title != null ? title.hashCode() : 0;
+        return externalId != null ? externalId.hashCode() : 0;
     }
 }
