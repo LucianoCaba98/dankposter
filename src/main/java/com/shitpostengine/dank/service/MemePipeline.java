@@ -1,6 +1,5 @@
 package com.shitpostengine.dank.service;
 
-import com.shitpostengine.dank.model.Meme;
 import com.shitpostengine.dank.model.MemeStatus;
 import com.shitpostengine.dank.repository.MemeRepository;
 import jakarta.annotation.PostConstruct;
@@ -15,33 +14,37 @@ import java.time.Duration;
 
 @Service
 @Slf4j
-public class MemeFetchPipeline {
+public class MemePipeline {
 
-    private final RedditFetcherService redditFetcherService;
+    private final MemeFetchService memeFetchService;
     private final DiscordPosterService discordPosterService;
     private final MemeRepository memeRepository;
 
-    public MemeFetchPipeline(RedditFetcherService redditFetcherService, DiscordPosterService discordPosterService, MemeRepository memeRepository) {
-        this.redditFetcherService = redditFetcherService;
+    public MemePipeline(MemeFetchService memeFetchService,
+                        DiscordPosterService discordPosterService,
+                        MemeRepository memeRepository) {
+        this.memeFetchService = memeFetchService;
         this.discordPosterService = discordPosterService;
         this.memeRepository = memeRepository;
     }
 
     @PostConstruct
     public void start() {
-        Flux.interval(Duration.ofSeconds(30))
-                .flatMap(tick -> redditFetcherService.fetch())
-                .flatMap(meme ->
+        Flux.interval(Duration.ofMinutes(5))
+                .flatMap(tick -> memeFetchService.fetch())
+                .concatMap(meme ->
                         Mono.fromCallable(() -> memeRepository.save(meme))
                                 .subscribeOn(Schedulers.boundedElastic())
                                 .onErrorResume(DataIntegrityViolationException.class, e -> {
-                            log.debug("Duplicate!: {}", meme.getRedditId());
-                            return Mono.empty();
-                        })
+                                    log.debug("Duplicate!: {}", meme.getExternalId());
+                                    return Mono.empty();
+                                })
                 )
+                // 🔑 SOLO memes recién fetcheados
                 .filter(meme -> meme.getStatus() == MemeStatus.FETCHED)
-                .delayElements(Duration.ofSeconds(2))
-                .concatMap( meme ->
+                // 🕒 business rate limit
+                .delayElements(Duration.ofSeconds(30))
+                .concatMap(meme ->
                         discordPosterService.post(meme)
                                 .flatMap(posted -> {
                                     posted.setStatus(MemeStatus.POSTED);
@@ -49,13 +52,15 @@ public class MemeFetchPipeline {
                                             .subscribeOn(Schedulers.boundedElastic());
                                 })
                                 .onErrorResume(e -> {
-                                    (meme).setStatus(MemeStatus.FAILED);
+                                    meme.setStatus(MemeStatus.FAILED);
+                                    log.error("Failed posting meme {}", meme.getExternalId(), e);
                                     return Mono.fromCallable(() -> memeRepository.save(meme))
                                             .subscribeOn(Schedulers.boundedElastic())
                                             .then(Mono.empty());
-                                }))
+                                })
+                )
                 .subscribe(
-                        success -> log.info("Posted meme {}", success.getRedditId()),
+                        success -> log.info("Posted meme {}", success.getExternalId()),
                         error -> log.error("Pipeline error", error)
                 );
     }
