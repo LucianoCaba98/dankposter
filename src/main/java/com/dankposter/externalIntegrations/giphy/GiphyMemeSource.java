@@ -65,7 +65,7 @@ public class GiphyMemeSource implements MemeSource {
         return Meme.builder()
                 .externalId("giphy_" + gif.getId())
                 .title(gif.getTitle())
-                .imageUrl(gifUrl) // 🔥 GIF REAL
+                .imageUrl(gifUrl)
                 .description(gif.getUrl())
                 .status(MemeStatus.FETCHED)
                 .source(Source.GIPHY)

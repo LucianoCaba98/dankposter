@@ -40,9 +40,7 @@ public class MemePipeline {
                                     return Mono.empty();
                                 })
                 )
-                // 🔑 SOLO memes recién fetcheados
                 .filter(meme -> meme.getStatus() == MemeStatus.FETCHED)
-                // 🕒 business rate limit
                 .delayElements(Duration.ofSeconds(30))
                 .concatMap(meme ->
                         discordPosterService.post(meme)

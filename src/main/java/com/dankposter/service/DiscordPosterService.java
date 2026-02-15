@@ -34,47 +34,5 @@ public class DiscordPosterService {
                 .thenReturn(meme);
     }
 
-//        return webClient.post()
-//                .uri("/channels/{channelId}/messages", discordConfig.getChannelId())
-//                .bodyValue(new DiscordMessage(message))
-//                .retrieve()
-//                .onStatus(
-//                        status -> status.value() == 429,
-//                        response -> {
-//                            Duration retryAfter = response.headers()
-//                                    .header("Retry-After")
-//                                    .stream()
-//                                    .findFirst()
-//                                    .map(Long::parseLong)
-//                                    .map(Duration::ofMillis)
-//                                    .orElse(Duration.ofSeconds(5));
-//
-//                            log.warn("Discord rate limited. Retry after {}", retryAfter);
-//                            return Mono.error(new DiscordRateLimitException(retryAfter));
-//                        }
-//                )
-//                .bodyToMono(Map.class)
-//                .doOnNext(body -> log.info("Discord response: {}", body))
-//                .thenReturn(meme)
-//                .onErrorResume(DiscordRateLimitException.class, ex -> {
-//                    log.warn("Retrying after {}", ex.getRetryAfter());
-//                    return Mono.delay(ex.getRetryAfter()).then(post(meme));
-//                })
-//
-//                .retryWhen(
-//                        Retry.from(retrySignals ->
-//                                    retrySignals.flatMap(signal -> {
-//                                        Throwable error = signal.failure();
-//                                        if (error instanceof DiscordRateLimitException rateLimit) {
-//                                            return Mono.delay(rateLimit.getRetryAfter());
-//                                        }
-//                                        return Mono.error(error);
-//                                    })
-//                                )
-//                )
-//                .thenReturn(meme);
-
-
-
     private record DiscordMessage(String content) {}
 }
