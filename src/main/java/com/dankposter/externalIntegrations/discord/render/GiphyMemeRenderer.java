@@ -20,10 +20,10 @@ public class GiphyMemeRenderer implements MemeRenderer {
     public DiscordMessagePayload render(Meme meme) {
         DiscordEmbed embed = new DiscordEmbed();
         embed.setTitle(meme.getTitle());
-        embed.setColor(0x9B59B6); // violeta sexy
+        embed.setColor(0x9B59B6);
 
         DiscordEmbed.EmbedImage image = new DiscordEmbed.EmbedImage();
-        image.setUrl(meme.getImageUrl()); // GIF REAL (downsized/original)
+        image.setUrl(meme.getImageUrl());
         embed.setImage(image);
 
         DiscordEmbed.EmbedFooter footer = new DiscordEmbed.EmbedFooter();
@@ -32,7 +32,7 @@ public class GiphyMemeRenderer implements MemeRenderer {
 
         DiscordMessagePayload payload = new DiscordMessagePayload();
         payload.setEmbeds(List.of(embed));
-        payload.setContent(null); // MUY IMPORTANTE: NO mandar el link en content
+        payload.setContent(null);
 
         return payload;
     }

@@ -5,9 +5,9 @@ import lombok.Data;
 @Data
 public class GiphyImages {
 
-    private GiphyImage original;        // gif pesado
-    private GiphyImage downsized;       // 👈 GIF ANIMADO IDEAL
-    private GiphyImage fixed_height;    // alternativa
-    private GiphyImage original_still;  // ❌ imagen estática
-    private GiphyImage preview;         // ❌ video
+    private GiphyImage original;
+    private GiphyImage downsized;
+    private GiphyImage fixed_height;
+    private GiphyImage original_still;
+    private GiphyImage preview;
 }
