@@ -8,7 +8,7 @@ Designed as a production-ready foundation for event-driven delivery systems.
 
 ---
 
-## 🚀 Core Capabilities
+## Core Capabilities
 
 - External source ingestion (Reddit / Giphy)
 - Reactive processing pipeline
@@ -19,11 +19,11 @@ Designed as a production-ready foundation for event-driven delivery systems.
 
 ---
 
-## 🧱 Architecture
+## Architecture
 
 DankPoster follows a pipeline-based architecture:
 
-Source → Persistence → Delivery
+Source -> Persistence -> Delivery
 
 Key design principles:
 
@@ -35,7 +35,7 @@ Key design principles:
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
 - Java 17
 - Spring Boot 3
@@ -46,7 +46,7 @@ Key design principles:
 
 ---
 
-## 🧠 System Design Considerations
+## System Design Considerations
 
 - External API rate limit resilience
 - Business rule-based delivery intervals
@@ -56,13 +56,13 @@ Key design principles:
 
 ---
 
-## 📦 Deployment
+## Deployment
 
 Containerized via Docker and ready for cloud environments (AWS compatible).
 
 ---
 
-## 🛣️ Roadmap
+## Roadmap
 
 - Queue decoupling (SQS-ready)
 - Distributed scheduling
@@ -71,6 +71,6 @@ Containerized via Docker and ready for cloud environments (AWS compatible).
 
 ---
 
-## 🧑‍💻 Author
+## Author
 
 Built as a product-oriented backend system focusing on reliability and controlled delivery pipelines.
