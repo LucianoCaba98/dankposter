@@ -183,8 +183,8 @@ pollMessages()
 ```
 
 **Key concepts:**
-- **Sequential processing:** Messages are processed one at a time. This is intentional — it prevents race conditions in deduplication. If two identical memes arrive simultaneously, sequential processing ensures only one gets saved.
-- **Dead Letter Queue (DLQ):** If a message fails processing repeatedly, SQS automatically moves it to the DLQ. You configure this on the AWS side, not in code.
+- **Sequential processing:** Messages are processed one at a time. This is intentional — it prevents race conditions in deduplication.
+- **Dead Letter Queue (DLQ):** If a message fails processing repeatedly, SQS automatically moves it to the DLQ.
 - **`Optional<KafkaProducerService>`:** Since Kafka might be disabled, this bean might not exist. `Optional` handles that gracefully.
 
 ---
@@ -201,9 +201,9 @@ kafkaProducerService.publishDeliveryEvent(event)
        └─ on failure: log at ERROR (retries already exhausted by Kafka client)
 ```
 
-**Why use `memeId` as the Kafka key?** Kafka guarantees ordering within a partition. Messages with the same key go to the same partition. Using `memeId` as the key means all events for a single meme are ordered — useful if you ever have update/delete events later.
+**Why use `memeId` as the Kafka key?** Kafka guarantees ordering within a partition. Messages with the same key go to the same partition.
 
-**Retry:** The Kafka producer is configured with 3 retries and 1-second backoff in `KafkaAutoConfiguration`. This happens at the Kafka client level, transparent to this service.
+**Retry:** The Kafka producer is configured with 3 retries and 1-second backoff in `KafkaAutoConfiguration`.
 
 ---
 
@@ -221,14 +221,14 @@ onMessage(record, acknowledgment)
        └─ found + not posted:
             └─ discordPosterService.postNextUnpostedMeme()
             └─ mark meme as posted
-            └─ acknowledgment.acknowledge()  ← manual offset commit
+            └─ acknowledgment.acknowledge()
             └─ on Discord failure: log ERROR, do NOT ack (Kafka redelivers)
 ```
 
 **Key concepts:**
-- **`@KafkaListener`:** Spring Kafka's annotation that turns a method into a Kafka consumer. It handles polling, deserialization, and threading for you.
-- **Manual acknowledgment:** We only call `acknowledgment.acknowledge()` after Discord succeeds. If Discord is down, the message stays unacknowledged and Kafka redelivers it later. No memes lost.
-- **Consumer group:** All instances of DankPoster share the same group ID. Kafka assigns partitions across instances so each event is processed by exactly one instance.
+- **`@KafkaListener`:** Spring Kafka's annotation that turns a method into a Kafka consumer.
+- **Manual acknowledgment:** We only call `acknowledgment.acknowledge()` after Discord succeeds.
+- **Consumer group:** All instances of DankPoster share the same group ID.
 
 ---
 
@@ -240,13 +240,9 @@ Two new `Optional` fields were added:
 - `Optional<SqsProducerService>` — present when SQS is enabled
 - `Optional<KafkaProducerService>` — present when Kafka is enabled
 
-The `fetchMemesFromSubreddit()` method now branches:
-- **SQS on:** Converts each meme to `MemeMessage` and sends to SQS. No direct DB save.
-- **SQS off:** Saves directly to DB (original behavior). If Kafka is on, also publishes `MemeDeliveryEvent` for each saved meme.
-
 #### `scheduler/MemeScheduler.java` — Kafka-aware poster
 
-The `memePoster()` method now checks `kafkaProperties.isEnabled()` at the top. When Kafka is handling delivery, the scheduler short-circuits — no double-posting.
+The `memePoster()` method now checks `kafkaProperties.isEnabled()` at the top. When Kafka is handling delivery, the scheduler short-circuits.
 
 ---
 
@@ -256,17 +252,17 @@ Add these to your `.ENV` file:
 
 ```bash
 # SQS Integration
-SQS_ENABLED=false          # set to "true" to enable
-SQS_QUEUE_URL=             # your SQS queue URL
-SQS_DLQ_URL=               # your dead letter queue URL
-AWS_REGION=us-east-1       # AWS region
-SQS_POLL_INTERVAL=10s      # how often to poll SQS
+SQS_ENABLED=false
+SQS_QUEUE_URL=
+SQS_DLQ_URL=
+AWS_REGION=us-east-1
+SQS_POLL_INTERVAL=10s
 
 # Kafka Integration
-KAFKA_ENABLED=false                    # set to "true" to enable
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092 # Kafka broker address(es)
-KAFKA_TOPIC=meme-delivery             # topic name for delivery events
-KAFKA_CONSUMER_GROUP=dankposter-delivery # consumer group ID
+KAFKA_ENABLED=false
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_TOPIC=meme-delivery
+KAFKA_CONSUMER_GROUP=dankposter-delivery
 ```
 
 ---
@@ -282,14 +278,12 @@ SQS_ENABLED=true
 SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/123456789/dankposter-memes
 SQS_DLQ_URL=https://sqs.us-east-1.amazonaws.com/123456789/dankposter-memes-dlq
 ```
-Memes go through SQS before being saved. Delivery still uses the scheduler.
 
 ### Mode 3: Kafka only
 ```bash
 KAFKA_ENABLED=true
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 ```
-Memes are saved directly (no SQS), but delivery is event-driven via Kafka instead of the scheduler.
 
 ### Mode 4: SQS + Kafka (full pipeline)
 ```bash
@@ -298,58 +292,6 @@ SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/123456789/dankposter-memes
 SQS_DLQ_URL=https://sqs.us-east-1.amazonaws.com/123456789/dankposter-memes-dlq
 KAFKA_ENABLED=true
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-```
-Full decoupled pipeline: fetch → SQS → persist → Kafka → Discord.
-
----
-
-## SQS Concepts for Beginners
-
-**What is SQS?** Amazon Simple Queue Service. Think of it as a mailbox — you put messages in, and someone else picks them up later. The sender and receiver don't need to be online at the same time.
-
-**Why use it here?** If Reddit returns 50 memes at once, they all go into the queue. The consumer processes them one at a time at its own pace. If the consumer crashes, the messages stay in the queue and get processed when it comes back.
-
-**Dead Letter Queue (DLQ):** A special queue for messages that failed processing too many times. Instead of retrying forever, SQS moves them to the DLQ so you can investigate later. You configure the max retry count on the AWS side.
-
-**Visibility timeout:** When a consumer picks up a message, SQS hides it from other consumers for a period. If the consumer doesn't delete the message in time (e.g., it crashed), the message becomes visible again for retry.
-
----
-
-## Kafka Concepts for Beginners
-
-**What is Kafka?** A distributed event streaming platform. Think of it as a log — events are appended in order, and consumers read from wherever they left off.
-
-**Topic:** A named stream of events. All meme delivery events go to the `meme-delivery` topic.
-
-**Partition:** Topics are split into partitions for parallelism. Messages with the same key (our `memeId`) always go to the same partition, preserving order per meme.
-
-**Consumer group:** A group of consumers that share the work. Kafka assigns partitions to consumers in the group. If you have 3 partitions and 3 consumers, each gets one partition. If a consumer dies, its partitions are reassigned.
-
-**Offset:** A number that tracks where a consumer is in a partition. After processing a message, the consumer "commits" the offset. On restart, it picks up from the last committed offset.
-
-**Why manual offset commit?** By default, Kafka auto-commits periodically. But if the consumer crashes between auto-commit and actually finishing the work, the message is lost. Manual commit means we only say "done" after Discord confirms the post went through.
-
-**Retries:** The Kafka producer is configured with 3 retries and 1-second backoff. If the broker is temporarily unavailable, the client retries automatically before giving up.
-
----
-
-## File Map
-
-```
-src/main/java/com/dankposter/
-├── config/
-│   ├── SqsProperties.java          ← NEW: SQS config binding
-│   ├── KafkaProperties.java        ← NEW: Kafka config binding
-│   ├── SqsAutoConfiguration.java   ← NEW: SQS bean wiring (conditional)
-│   └── KafkaAutoConfiguration.java ← NEW: Kafka bean wiring (conditional)
-├── dto/
-│   ├── MemeMessage.java            ← NEW: SQS message payload
-│   └── MemeDeliveryEvent.java      ← NEW: Kafka event payload
-├── service/
-│   ├── SqsProducerService.java     ← NEW: sends memes to SQS
-│   ├── SqsConsumerService.java     ← NEW: reads memes from SQS
-│   ├── KafkaProducerService.java   ← NEW: publishes delivery events
-│   └── KafkaConsumerService.java   ← NEW: consumes events, posts to Discord
 ```
 
 ---
