@@ -25,6 +25,7 @@ public class KafkaConsumerService {
     private final ObjectMapper objectMapper;
     private final MemeRepository memeRepository;
     private final DiscordPosterService discordPosterService;
+    private final MemeEventPublisher memeEventPublisher;
 
     @KafkaListener(
             topics = "#{@kafkaProperties.topic}",
@@ -57,7 +58,8 @@ public class KafkaConsumerService {
         try {
             discordPosterService.post(meme).block();
             meme.setStatus(MemeStatus.POSTED);
-            memeRepository.save(meme);
+            Meme saved = memeRepository.save(meme);
+            memeEventPublisher.publishPosted(saved);
             log.info("Successfully delivered meme via Kafka: memeId={}", event.memeId());
             acknowledgment.acknowledge();
         } catch (Exception e) {

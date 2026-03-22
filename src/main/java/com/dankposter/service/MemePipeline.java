@@ -1,5 +1,8 @@
 package com.dankposter.service;
 
+import com.dankposter.config.KafkaProperties;
+import com.dankposter.dto.MemeDeliveryEvent;
+import com.dankposter.model.Meme;
 import com.dankposter.model.MemeStatus;
 import com.dankposter.repository.MemeRepository;
 import jakarta.annotation.PostConstruct;
@@ -11,6 +14,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -19,22 +24,55 @@ public class MemePipeline {
     private final MemeFetchService memeFetchService;
     private final DiscordPosterService discordPosterService;
     private final MemeRepository memeRepository;
+    private final MemeEventPublisher memeEventPublisher;
+    private final Optional<KafkaProducerService> kafkaProducerService;
+    private final Optional<KafkaProperties> kafkaProperties;
 
     public MemePipeline(MemeFetchService memeFetchService,
                         DiscordPosterService discordPosterService,
-                        MemeRepository memeRepository) {
+                        MemeRepository memeRepository,
+                        MemeEventPublisher memeEventPublisher,
+                        Optional<KafkaProducerService> kafkaProducerService,
+                        Optional<KafkaProperties> kafkaProperties) {
         this.memeFetchService = memeFetchService;
         this.discordPosterService = discordPosterService;
         this.memeRepository = memeRepository;
+        this.memeEventPublisher = memeEventPublisher;
+        this.kafkaProducerService = kafkaProducerService;
+        this.kafkaProperties = kafkaProperties;
+    }
+
+    private boolean isKafkaEnabled() {
+        return kafkaProperties.map(KafkaProperties::isEnabled).orElse(false)
+                && kafkaProducerService.isPresent();
+    }
+
+    private void publishToKafka(Meme meme) {
+        var event = new MemeDeliveryEvent(
+                meme.getId(),
+                meme.getTitle(),
+                meme.getImageUrl(),
+                meme.getDanknessScore()
+        );
+        kafkaProducerService.ifPresent(producer -> producer.publishDeliveryEvent(event));
+        log.info("Published meme to Kafka: id={}, title={}", meme.getId(), meme.getTitle());
     }
 
     @PostConstruct
     public void start() {
-        Flux.interval(Duration.ofMinutes(5))
+        boolean kafkaEnabled = isKafkaEnabled();
+        if (kafkaEnabled) {
+            log.info("Kafka delivery enabled — memes will be routed through Kafka");
+        } else {
+            log.info("Direct Discord delivery — Kafka is disabled");
+        }
+
+        Flux.interval(Duration.ZERO, Duration.ofMinutes(5))
                 .flatMap(tick -> memeFetchService.fetch())
                 .concatMap(meme ->
                         Mono.fromCallable(() -> memeRepository.save(meme))
                                 .subscribeOn(Schedulers.boundedElastic())
+                                .doOnNext(saved -> memeEventPublisher.publishIngested(List.of(saved)))
                                 .onErrorResume(DataIntegrityViolationException.class, e -> {
                                     log.debug("Duplicate!: {}", meme.getExternalId());
                                     return Mono.empty();
@@ -42,24 +80,40 @@ public class MemePipeline {
                 )
                 .filter(meme -> meme.getStatus() == MemeStatus.FETCHED)
                 .delayElements(Duration.ofSeconds(30))
-                .concatMap(meme ->
-                        discordPosterService.post(meme)
-                                .flatMap(posted -> {
-                                    posted.setStatus(MemeStatus.POSTED);
-                                    return Mono.fromCallable(() -> memeRepository.save(posted))
-                                            .subscribeOn(Schedulers.boundedElastic());
-                                })
+                .concatMap(meme -> {
+                    if (kafkaEnabled) {
+                        return Mono.fromRunnable(() -> publishToKafka(meme))
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .thenReturn(meme)
                                 .onErrorResume(e -> {
-                                    meme.setStatus(MemeStatus.FAILED);
-                                    log.error("Failed posting meme {}", meme.getExternalId(), e);
-                                    return Mono.fromCallable(() -> memeRepository.save(meme))
-                                            .subscribeOn(Schedulers.boundedElastic())
-                                            .then(Mono.empty());
-                                })
-                )
+                                    log.error("Failed publishing meme {} to Kafka, falling back to direct post",
+                                            meme.getExternalId(), e);
+                                    return directPost(meme);
+                                });
+                    } else {
+                        return directPost(meme);
+                    }
+                })
                 .subscribe(
-                        success -> log.info("Posted meme {}", success.getExternalId()),
+                        success -> log.info("Processed meme {}", success.getExternalId()),
                         error -> log.error("Pipeline error", error)
                 );
+    }
+
+    private Mono<Meme> directPost(Meme meme) {
+        return discordPosterService.post(meme)
+                .flatMap(posted -> {
+                    posted.setStatus(MemeStatus.POSTED);
+                    return Mono.fromCallable(() -> memeRepository.save(posted))
+                            .subscribeOn(Schedulers.boundedElastic())
+                            .doOnNext(memeEventPublisher::publishPosted);
+                })
+                .onErrorResume(e -> {
+                    meme.setStatus(MemeStatus.FAILED);
+                    log.error("Failed posting meme {}", meme.getExternalId(), e);
+                    return Mono.fromCallable(() -> memeRepository.save(meme))
+                            .subscribeOn(Schedulers.boundedElastic())
+                            .then(Mono.empty());
+                });
     }
 }
