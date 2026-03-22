@@ -15,6 +15,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.net.URI;
+import java.time.Duration;
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -28,28 +32,50 @@ public class RedditMemeSource implements MemeSource {
     private final WebClient webClient;
     private final RedditProperties redditProperties;
 
-    public Flux<Meme> fetch() {
-        log.info("fetching memes from reddit #hard");
-        return Flux.fromIterable(redditProperties.getSubreddits())
+    private static final List<String> SORT_MODES = List.of("hot", "new");
 
-                .flatMap(source -> {
-                    String url = String.format("https://www.reddit.com/r/%s/hot.json?limit=%d", source.getName(), source.getLimit());
-                    return webClient
-                            .get()
-                            .uri(url)
-                            .retrieve()
-                            .bodyToMono(RedditResponse.class)
-                            .onErrorResume(e -> {
-                                log.warn("Error fetching r/{}", source.getName(), e);
-                                return Mono.empty();
-                            });
-                }, 2)
+    public Flux<Meme> fetch() {
+        log.info("Fetching memes from reddit ({} subreddits \u00d7 {} modes)", 
+                redditProperties.getSubreddits().size(), SORT_MODES.size());
+        return Flux.fromIterable(redditProperties.getSubreddits())
+                .concatMap(source -> Flux.fromIterable(SORT_MODES)
+                        .concatMap(mode -> {
+                            String url = String.format("https://www.reddit.com/r/%s/%s.json?limit=%d",
+                                    source.getName(), mode, source.getLimit());
+                            return Mono.delay(Duration.ofMillis(1500))
+                                    .then(webClient
+                                            .get()
+                                            .uri(URI.create(url))
+                                            .header("User-Agent", "DankPoster/1.0")
+                                            .retrieve()
+                                            .bodyToMono(RedditResponse.class)
+                                            .doOnNext(r -> log.info("Fetched {} posts from r/{}/{}", 
+                                                    r.getData().getChildren().size(), source.getName(), mode))
+                                            .onErrorResume(e -> {
+                                                log.warn("Error fetching r/{}/{}: {}", source.getName(), mode, e.getMessage());
+                                                return Mono.empty();
+                                            }));
+                        }))
                 .flatMap(response -> Flux.fromIterable(response.getData().getChildren()))
                 .map(RedditChild::getData)
+                .filter(post -> post.getUrl() != null && !post.getUrl().isBlank())
+                .filter(post -> {
+                    String hint = post.getPostHint();
+                    if ("image".equals(hint)) return true;
+                    if (hint == null) {
+                        // No hint \u2014 accept if URL looks like direct media
+                        String lower = post.getUrl().toLowerCase();
+                        return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")
+                                || lower.endsWith(".gif") || lower.endsWith(".gifv");
+                    }
+                    return false;
+                })
                 .map(meme -> Meme.builder()
                         .externalId(meme.getId())
                         .description(meme.getDescription())
-                        .title(meme.getTitle())
+                        .title(meme.getTitle() != null && meme.getTitle().length() > 500
+                                ? meme.getTitle().substring(0, 497) + "..."
+                                : meme.getTitle())
                         .imageUrl(meme.getUrl())
                         .status(MemeStatus.FETCHED)
                         .source(Source.REDDIT)
@@ -60,4 +86,5 @@ public class RedditMemeSource implements MemeSource {
     public String sourceName() {
         return "REDDIT";
     }
+
 }
