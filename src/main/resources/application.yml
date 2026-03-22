@@ -1,0 +1,98 @@
+server:
+  port: ${PORT:8080}
+
+scheduling:
+  fetch-interval-ms: ${SCHEDULING_FETCH_INTERVAL_MS:300000}
+  post-interval-ms: ${SCHEDULING_POST_INTERVAL_MS:30000}
+
+reddit:
+  subreddits:
+    - name: ${SR_1:dankmemes}
+      limit: 25
+    - name: ${SR_2:memes}
+      limit: 25
+    - name: ${SR_3:shitposting}
+      limit: 25
+    - name: ${SR_4:me_irl}
+      limit: 25
+    - name: ${SR_5:wholesomememes}
+      limit: 25
+    - name: ${SR_6:programmerhumor}
+      limit: 25
+    - name: ${SR_7:linuxmemes}
+      limit: 25
+    - name: ${SR_8:okbuddyretard}
+      limit: 25
+    - name: ${SR_9:argentina}
+      limit: 25
+    - name: ${SR_10:ArgentinaBenderStyle}
+      limit: 25
+    - name: ${SR_11:funny}
+      limit: 25
+    - name: ${SR_12:AdviceAnimals}
+      limit: 25
+    - name: ${SR_13:MemeEconomy}
+      limit: 25
+    - name: ${SR_14:terriblefacebookmemes}
+      limit: 25
+    - name: ${SR_15:surrealmemes}
+      limit: 25
+    - name: ${SR_16:196}
+      limit: 25
+    - name: ${SR_17:whenthe}
+      limit: 25
+    - name: ${SR_18:antimeme}
+      limit: 25
+    - name: ${SR_19:bonehurtingjuice}
+      limit: 25
+    - name: ${SR_20:comedyheaven}
+      limit: 25
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:dankdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: org.h2.Driver
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+
+  h2:
+    console:
+      enabled: false
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+    show-sql: ${SHOW_SQL:false}
+    properties:
+      hibernate:
+        format_sql: false
+
+discord:
+  bot-token: ${DISCORD_BOT_TOKEN}
+  channel-id: ${DISCORD_CHANNEL_ID}
+
+meme:
+  sources:
+    reddit: ${MEME_SOURCES_REDDIT:true}
+    giphy: ${MEME_SOURCES_GIPHY:false}
+  posting:
+    interval: ${MEME_POSTING_INTERVAL:30s}
+    fetch-interval: ${MEME_FETCH_INTERVAL:5m}
+  queue:
+    sqs:
+      enabled: ${SQS_ENABLED:false}
+      queue-url: ${SQS_QUEUE_URL:}
+      dlq-url: ${SQS_DLQ_URL:}
+      region: ${AWS_REGION:us-east-1}
+      poll-interval: ${SQS_POLL_INTERVAL:10s}
+  stream:
+    kafka:
+      enabled: ${KAFKA_ENABLED:false}
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+      topic: ${KAFKA_TOPIC:meme-delivery}
+      consumer-group: ${KAFKA_CONSUMER_GROUP:dankposter-delivery}
+
+giphy:
+  api:
+    key: ${GIPHY_API_KEY}
