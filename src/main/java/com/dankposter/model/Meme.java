@@ -6,7 +6,10 @@ import lombok.*;
 @Entity
 @Table(
         name = "memes",
-        uniqueConstraints = @UniqueConstraint(columnNames = "external_id")
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "external_id"),
+                @UniqueConstraint(columnNames = "image_url")
+        }
 )
 @Data
 @NoArgsConstructor
@@ -26,7 +29,9 @@ public class Meme {
     @Enumerated(EnumType.STRING)
     private Source source;
 
+    @Column(length = 500)
     private String title;
+    @Column(name = "image_url", length = 2048, unique = true)
     private String imageUrl;
     private Double danknessScore;
     @Lob
