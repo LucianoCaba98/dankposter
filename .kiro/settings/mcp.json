@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "awslabs.amazon-sns-sqs-mcp-server": {
+      "disabled": false,
+      "timeout": 60,
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "tool",
+        "run",
+        "--from",
+        "awslabs.amazon-sns-sqs-mcp-server@latest",
+        "awslabs.amazon-sns-sqs-mcp-server.exe",
+        "--allow-resource-creation"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR",
+        "AWS_PROFILE": "default",
+        "AWS_REGION": "us-east-1"
+      },
+      "autoApprove": []
+    },
+    "awslabs.ecs-mcp-server": {
+      "disabled": false,
+      "timeout": 60,
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "tool",
+        "run",
+        "--from",
+        "awslabs.ecs-mcp-server@latest",
+        "awslabs.ecs-mcp-server.exe"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR",
+        "AWS_PROFILE": "default",
+        "AWS_REGION": "us-east-1"
+      },
+      "autoApprove": []
+    }
+  }
+}

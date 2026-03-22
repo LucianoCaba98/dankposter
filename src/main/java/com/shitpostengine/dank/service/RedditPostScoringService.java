@@ -8,8 +8,22 @@ public class RedditPostScoringService {
 
     public Double calculateInteractionScore(RedditPost post) {
         String url = post.getUrl();
+        String hint = post.getPostHint();
 
-        if (url == null || !(url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png"))) {
+        // Accept direct image URLs and posts Reddit identifies as images
+        boolean isImage = false;
+        if (url != null) {
+            String lower = url.toLowerCase();
+            isImage = lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")
+                    || lower.endsWith(".gif") || lower.endsWith(".webp")
+                    || lower.contains("i.redd.it") || lower.contains("i.imgur.com")
+                    || lower.contains("preview.redd.it");
+        }
+        if (!isImage && hint != null) {
+            isImage = hint.equals("image") || hint.equals("link");
+        }
+
+        if (!isImage) {
             return 0.0;
         }
 

@@ -17,7 +17,9 @@ public class Meme {
     @Column(unique = true)
     private String redditId;
 
+    @Column(length = 500)
     private String title;
+    @Column(length = 2048)
     private String imageUrl;
     private Double danknessScore;
     private boolean posted;

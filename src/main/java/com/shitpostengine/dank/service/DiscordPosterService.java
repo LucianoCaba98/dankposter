@@ -20,6 +20,7 @@ public class DiscordPosterService {
 
     private final MemeRepository memeRepository;
     private final DiscordConfig discordConfig;
+    private final MemeEventPublisher memeEventPublisher;
 
     public void postNextUnpostedMeme() {
         Optional<Meme> memeOpt = memeRepository.findFirstByPostedFalseOrderByDanknessScoreDesc();
@@ -35,6 +36,7 @@ public class DiscordPosterService {
             log.warn("Skipping duplicate meme: {}", meme.getImageUrl());
             meme.setPosted(true);
             memeRepository.save(meme);
+            memeEventPublisher.publishPosted(meme);
             return;
         }
 
@@ -55,6 +57,7 @@ public class DiscordPosterService {
                     log.info("Successfully posted meme to Discord.");
                     meme.setPosted(true);
                     memeRepository.save(meme);
+                    memeEventPublisher.publishPosted(meme);
                 })
                 .doOnError(error -> log.error("Failed to post meme to Discord", error))
                 .subscribe();
