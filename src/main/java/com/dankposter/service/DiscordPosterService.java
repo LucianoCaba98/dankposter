@@ -19,13 +19,9 @@ public class DiscordPosterService {
     private final WebClient discordClient;
     private final MemeRenderService memeRenderService;
 
-
     public Mono<Meme> post(Meme meme) {
         DiscordMessagePayload payload = memeRenderService.render(meme);
-
         log.info("Discord payload: {}", payload);
-
-
         return discordClient.post()
                 .uri("/channels/{channelId}/messages", discordConfig.getChannelId())
                 .bodyValue(payload)
@@ -33,6 +29,4 @@ public class DiscordPosterService {
                 .bodyToMono(String.class)
                 .thenReturn(meme);
     }
-
-    private record DiscordMessage(String content) {}
 }
