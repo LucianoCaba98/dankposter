@@ -1,11 +1,12 @@
 export interface Meme {
   id: number
-  redditId: string
+  externalId: string
   title: string
   imageUrl: string
   danknessScore: number
   posted: boolean
   description: string | null
+  source: string | null
 }
 
 export interface ConfigCategory {
