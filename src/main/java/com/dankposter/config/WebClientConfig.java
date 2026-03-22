@@ -9,7 +9,6 @@ import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
-
 import java.net.URI;
 
 @Configuration
@@ -18,12 +17,10 @@ public class WebClientConfig {
     @Bean
     public WebClient webClient() {
         ExchangeStrategies strategies = ExchangeStrategies.builder()
-                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))  // 16 MB
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
                 .build();
-
         return WebClient.builder()
-                .defaultHeader(HttpHeaders.USER_AGENT,
-                        "DankPosterBot/1.0 (by u/LucianoCaba98)")
+                .defaultHeader(HttpHeaders.USER_AGENT, "DankPosterBot/1.0 (by u/LucianoCaba98)")
                 .defaultHeader(HttpHeaders.ACCEPT, "application/json")
                 .defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip")
                 .exchangeStrategies(strategies)
@@ -31,9 +28,7 @@ public class WebClientConfig {
     }
 
     @Bean
-    public WebClient giphyClient(
-            @Value("${giphy.api.key}") String apiKey) {
-
+    public WebClient giphyClient(@Value("${giphy.api.key}") String apiKey) {
         return WebClient.builder()
                 .baseUrl("https://api.giphy.com")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -42,10 +37,7 @@ public class WebClientConfig {
                             .queryParam("api_key", apiKey)
                             .build(true)
                             .toUri();
-
-                    return next.exchange(
-                            ClientRequest.from(req).url(uri).build()
-                    );
+                    return next.exchange(ClientRequest.from(req).url(uri).build());
                 })
                 .build();
     }
@@ -54,8 +46,7 @@ public class WebClientConfig {
     public WebClient discordClient(DiscordConfig discordConfig) {
         return WebClient.builder()
                 .baseUrl("https://discord.com/api/v10")
-                .defaultHeader(HttpHeaders.USER_AGENT,
-                        "DankPosterBot/1.0 (by u/LucianoCaba98)")
+                .defaultHeader(HttpHeaders.USER_AGENT, "DankPosterBot/1.0 (by u/LucianoCaba98)")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bot " + discordConfig.getBotToken())
                 .build();
