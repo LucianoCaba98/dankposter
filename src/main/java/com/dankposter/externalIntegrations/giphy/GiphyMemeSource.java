@@ -16,11 +16,7 @@ import reactor.core.publisher.Flux;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@ConditionalOnProperty(
-        prefix = "meme.sources",
-        name = "giphy",
-        havingValue = "true"
-)
+@ConditionalOnProperty(prefix = "meme.sources", name = "giphy", havingValue = "true")
 public class GiphyMemeSource implements MemeSource {
 
     private final WebClient giphyClient;
@@ -42,26 +38,14 @@ public class GiphyMemeSource implements MemeSource {
     }
 
     @Override
-    public String sourceName() {
-        return "GIPHY";
-    }
+    public String sourceName() { return "GIPHY"; }
 
     private Meme toMeme(GiphyGif gif) {
         String gifUrl = null;
-
-        if (gif.getImages().getDownsized() != null) {
-            gifUrl = gif.getImages().getDownsized().getUrl();
-        } else if (gif.getImages().getOriginal() != null) {
-            gifUrl = gif.getImages().getOriginal().getUrl();
-        } else if (gif.getImages().getFixed_height() != null) {
-            gifUrl = gif.getImages().getFixed_height().getUrl();
-        }
-
-        if (gifUrl == null) {
-            log.warn("No usable gif found for giphy id {}", gif.getId());
-            return null;
-        }
-
+        if (gif.getImages().getDownsized() != null) gifUrl = gif.getImages().getDownsized().getUrl();
+        else if (gif.getImages().getOriginal() != null) gifUrl = gif.getImages().getOriginal().getUrl();
+        else if (gif.getImages().getFixed_height() != null) gifUrl = gif.getImages().getFixed_height().getUrl();
+        if (gifUrl == null) { log.warn("No usable gif found for giphy id {}", gif.getId()); return null; }
         return Meme.builder()
                 .externalId("giphy_" + gif.getId())
                 .title(gif.getTitle())
@@ -71,5 +55,4 @@ public class GiphyMemeSource implements MemeSource {
                 .source(Source.GIPHY)
                 .build();
     }
-
 }
