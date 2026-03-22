@@ -4,12 +4,10 @@ import lombok.Data;
 
 @Data
 public class DiscordEmbed {
-
     private String title;
     private String description;
     private String url;
     private Integer color;
-
     private EmbedImage image;
     private EmbedVideo video;
     private EmbedFooter footer;

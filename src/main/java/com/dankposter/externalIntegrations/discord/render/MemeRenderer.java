@@ -5,8 +5,6 @@ import com.dankposter.model.Meme;
 import com.dankposter.model.Source;
 
 public interface MemeRenderer {
-
     boolean supports(Source source);
-
     DiscordMessagePayload render(Meme meme);
 }
