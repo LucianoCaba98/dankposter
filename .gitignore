@@ -32,6 +32,13 @@ build/
 ### VS Code ###
 .vscode/
 
+### AI / IDE assistants ###
+.kiro/
+.jqwik-database
+.copilot/
+.cursor/
+.aider*
+
 ### yaml
 src/main/resources/application.yml
 

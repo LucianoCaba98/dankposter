@@ -16,6 +16,16 @@
     <div v-else class="meme-grid">
       <MemeCard v-for="meme in memes" :key="meme.id" :meme="meme" />
     </div>
+
+    <div class="queue-section">
+      <div class="queue-header">
+        <h2 class="queue-title">📋 Posting Queue ({{ queueMemes.length }})</h2>
+      </div>
+      <div v-if="queueMemes.length === 0" class="feed-status">No memes queued for posting</div>
+      <div v-else class="meme-grid">
+        <MemeCard v-for="meme in queueMemes" :key="'queue-' + meme.id" :meme="meme" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -26,6 +36,7 @@ import { useSse } from '../composables/useSse'
 import MemeCard from '../components/MemeCard.vue'
 
 const memes = ref<Meme[]>([])
+const queueMemes = ref<Meme[]>([])
 const loading = ref(true)
 const ingestedCount = ref(0)
 const postedCount = ref(0)
@@ -33,11 +44,23 @@ const postedCount = ref(0)
 const { lastEvent: ingestionEvent } = useSse('/api/events/ingestion')
 const { lastEvent: postedEvent } = useSse('/api/events/posted')
 
+async function fetchQueue() {
+  try {
+    const res = await fetch('/api/memes/queue')
+    if (res.ok) {
+      queueMemes.value = await res.json()
+    }
+  } catch (e) {
+    console.error('Failed to fetch posting queue:', e)
+  }
+}
+
 watch(ingestionEvent, (newMeme) => {
-  if (newMeme) {
+  if (newMeme && !memes.value.some(m => m.id === newMeme.id)) {
     memes.value = [newMeme, ...memes.value]
     ingestedCount.value++
   }
+  fetchQueue()
 })
 
 watch(postedEvent, (postedMeme) => {
@@ -48,6 +71,7 @@ watch(postedEvent, (postedMeme) => {
       memes.value[idx] = { ...memes.value[idx], posted: true }
     }
   }
+  fetchQueue()
 })
 
 onMounted(async () => {
@@ -70,6 +94,7 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  fetchQueue()
 })
 </script>
 
@@ -83,5 +108,20 @@ onMounted(async () => {
 .posted-counter { color: #52b788; }
 .counter-divider { color: #4a4a6a; }
 .feed-status { text-align: center; color: #a0a0b8; padding: 48px 0; font-size: 1rem; }
-.meme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.meme-grid { columns: 3 300px; column-gap: 20px; }
+.meme-grid > * { margin-bottom: 20px; }
+
+.queue-section {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 2px solid #2a2a4a;
+}
+.queue-header {
+  margin-bottom: 20px;
+}
+.queue-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #bb86fc;
+}
 </style>

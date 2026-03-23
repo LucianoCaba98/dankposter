@@ -3,7 +3,6 @@ export interface Meme {
   externalId: string
   title: string
   imageUrl: string
-  danknessScore: number
   posted: boolean
   description: string | null
   source: string | null
@@ -16,7 +15,7 @@ export interface ConfigCategory {
 export interface AppConfig {
   scheduling: { fetchIntervalMs: number; postIntervalMs: number }
   sqs: { enabled: boolean; queueUrl: string; dlqUrl: string; region: string; pollInterval: number }
-  kafka: { enabled: boolean; bootstrapServers: string; topic: string; consumerGroup: string }
+  kafka: { bootstrapServers: string; topic: string; consumerGroup: string }
   discord: { botToken: string; channelId: string }
   redditSubreddits: Array<{ name: string; limit: number }>
 }
@@ -24,4 +23,15 @@ export interface AppConfig {
 export interface ValidationError {
   field: string
   message: string
+}
+
+export interface KafkaMessageEvent {
+  topic: string
+  partition: number | null
+  offset: number | null
+  key: string
+  timestamp: string | null
+  payload: string
+  deliveryStatus: 'produced' | 'consumed' | 'delivered' | 'failed'
+  capturedAt: string
 }

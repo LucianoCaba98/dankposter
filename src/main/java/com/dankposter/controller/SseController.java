@@ -23,4 +23,9 @@ public class SseController {
     public SseEmitter streamPostedEvents() {
         return sseEmitterService.createEmitter("posted");
     }
+
+    @GetMapping("/kafka-metrics")
+    public SseEmitter streamKafkaMetrics() {
+        return sseEmitterService.createEmitter("kafka-metrics");
+    }
 }

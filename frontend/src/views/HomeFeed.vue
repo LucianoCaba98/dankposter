@@ -24,7 +24,7 @@ const loading = ref(true)
 const { lastEvent } = useSse('/api/events/posted')
 
 watch(lastEvent, (newMeme) => {
-  if (newMeme) {
+  if (newMeme && !memes.value.some(m => m.id === newMeme.id)) {
     memes.value = [newMeme, ...memes.value]
   }
 })
@@ -48,5 +48,6 @@ onMounted(async () => {
 .home-feed { padding: 8px 0; }
 .feed-title { font-size: 1.4rem; font-weight: 700; color: #e0e0e0; margin-bottom: 20px; }
 .feed-status { text-align: center; color: #a0a0b8; padding: 48px 0; font-size: 1rem; }
-.meme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.meme-grid { columns: 3 300px; column-gap: 20px; }
+.meme-grid > * { margin-bottom: 20px; }
 </style>

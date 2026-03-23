@@ -27,23 +27,51 @@ Edit `.env.local` and set these required values:
 DISCORD_BOT_TOKEN=your-bot-token-here
 DISCORD_CHANNEL_ID=your-channel-id-here
 
-# Required — at least one subreddit (defaults are already set in .ENV)
+# Subreddits — defaults are set in application.yml, override here if you want
 SR_1=dankmemes
 SR_2=memes
-# ... SR_3 through SR_10 are optional
+# ... up to SR_20
 
-# Optional — Giphy (if you want Giphy as a source)
+# Optional — Giphy (enables Giphy as a meme source)
 GIPHY_API_KEY=your-giphy-key
 
 # Optional — override defaults
 PORT=8080
-SCHEDULING_FETCH_INTERVAL_MS=300000   # fetch memes every 5 min
-SCHEDULING_POST_INTERVAL_MS=30000     # post to Discord every 30 sec
 ```
 
-> SQS and Kafka are disabled by default. See `SQS-KAFKA-PLAYBOOK.md` if you want to enable them.
+> SQS and Kafka are disabled by default. See `SQS-KAFKA-PLAYBOOK.md` to enable them.
 
-## 2. Start the backend
+## 2. Architecture overview
+
+DankPoster uses a fully reactive pipeline — no schedulers or cron jobs.
+
+```
+Sources (Reddit, Giphy) → MemePipeline → Persistence (H2/PostgreSQL) → Discord Delivery
+```
+
+- **`MemePipeline`** — a `@PostConstruct` reactive `Flux.interval` chain that fetches, persists, and posts memes
+- **`MemeSource` interface** — pluggable sources (`RedditMemeSource`, `GiphyMemeSource`) loaded via `@ConditionalOnProperty`
+- **`MemeRenderer` strategy** — source-specific Discord embed rendering (`RedditMemeRenderer`, `GiphyMemeRenderer`)
+- **SSE events** — real-time ingestion/posted events pushed to the frontend
+- **SQS/Kafka** — optional message queue and event streaming integration (disabled by default)
+
+### Package structure
+
+```
+com.dankposter
+├── config/              # Spring config, properties binding
+├── controller/          # REST + SSE endpoints
+├── dto/                 # Reddit, Giphy, Kafka DTOs
+├── externalIntegrations/
+│   ├── discord/         # Discord renderers (Strategy pattern)
+│   ├── giphy/           # GiphyMemeSource
+│   └── reddit/          # RedditMemeSource
+├── model/               # JPA entities, enums, MemeSource interface
+├── repository/          # Spring Data JPA
+└── service/             # Pipeline, Discord poster, SSE, SQS, Kafka
+```
+
+## 3. Start the backend
 
 Export your env vars and run:
 
@@ -51,9 +79,11 @@ Export your env vars and run:
 # Linux/macOS
 export $(cat .env.local | xargs)
 ./mvnw spring-boot:run
+```
 
+```powershell
 # Windows (PowerShell)
-Get-Content .env.local | ForEach-Object {
+Get-Content .ENV | ForEach-Object {
   if ($_ -match '^([^#].+?)=(.*)$') {
     [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
   }
@@ -61,13 +91,15 @@ Get-Content .env.local | ForEach-Object {
 ./mvnw.cmd spring-boot:run
 ```
 
-The backend starts on `http://localhost:8080`. It uses an in-memory H2 database by default — no DB setup needed.
+The backend starts on `http://localhost:8080` with an in-memory H2 database (no setup needed).
 
-Once running, the scheduler will:
-- Fetch memes from your configured subreddits every 5 minutes
-- Post the dankest unposted meme to Discord every 30 seconds
+On startup, the reactive pipeline immediately begins:
+- Fetching memes from all configured sources every 5 minutes
+- Deduplicating by `externalId` (Reddit post ID, Giphy GIF ID)
+- Posting to Discord with a 30-second delay between posts
+- Broadcasting SSE events for real-time frontend updates
 
-## 3. Start the frontend
+## 4. Start the frontend
 
 In a separate terminal:
 
@@ -77,48 +109,81 @@ npm install
 npm run dev
 ```
 
-The Vite dev server starts on `http://localhost:5173` and proxies `/api` requests to the backend on port 8080.
+> **Windows note:** If `npm` fails due to PowerShell execution policy, use `cmd /c "cd frontend && npx vite --host"` instead.
 
-## 4. Open the app
+The Vite dev server starts on `http://localhost:5173` and proxies `/api` requests to the backend.
 
-Navigate to `http://localhost:5173` in your browser. You'll see three pages:
+## 5. Open the app
+
+Navigate to `http://localhost:5173`:
 
 | Route | What it shows |
 |-------|--------------|
-| `/` | Posted Memes — memes that have been sent to Discord |
-| `/#/ingestion` | Ingestion Feed — all memes (posted + pending), live-updating via SSE |
-| `/#/admin` | Admin Panel — configure scheduling, Discord, subreddits, SQS, Kafka |
+| `/` | Posted memes — successfully sent to Discord, no status badges |
+| `/#/ingestion` | All memes with Posted/Pending status, live counters via SSE |
+| `/#/admin` | Admin panel — configure subreddits, Discord, scheduling, SQS, Kafka |
 
-> The app uses hash-based routing (`/#/`), so all routes work without server-side config.
+Click any meme card to expand it (Instagram-style overlay).
 
-## 5. Build for production (optional)
+## 6. Meme sources
 
-To bundle the frontend into the Spring Boot static resources:
+| Source | Enabled by | How it works |
+|--------|-----------|--------------|
+| Reddit | `meme.sources.reddit=true` | Fetches from configured subreddits via public `.json` API. No API key needed. |
+| Giphy | `meme.sources.giphy=true` | Fetches trending GIFs. Requires `GIPHY_API_KEY`. |
+
+Both sources are toggled via `application.yml` or env vars (`MEME_SOURCES_REDDIT`, `MEME_SOURCES_GIPHY`).
+
+## 7. Build for production
+
+Bundle the frontend into Spring Boot's static resources:
 
 ```bash
 cd frontend
 npm run build
 ```
 
-This outputs to `src/main/resources/static/`. Then package everything:
+Then package everything into a single JAR:
 
 ```bash
 ./mvnw clean package -DskipTests
-java -jar target/dank-0.0.1-SNAPSHOT.jar
+java -jar target/dank-1.0.0.jar
 ```
 
-Now the entire app (backend + frontend) runs from a single JAR on port 8080.
+### Docker
 
-## Database options
+```bash
+./mvnw clean package -DskipTests
+docker build -t dankposter .
+docker run --env-file .ENV -p 8080:8080 dankposter
+```
+
+## 8. Database options
 
 | Mode | Config | Notes |
 |------|--------|-------|
 | Dev (default) | H2 in-memory | Zero setup, data resets on restart |
 | Prod | PostgreSQL | Set `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` env vars |
 
+DDL strategy is controlled by `DDL_AUTO` env var (default: `update`).
+
+## 9. Optional integrations
+
+### SQS (message queue)
+
+Set `SQS_ENABLED=true` plus `SQS_QUEUE_URL`, `SQS_DLQ_URL`, `AWS_REGION`. When enabled, fetched memes are sent to SQS instead of being persisted directly. An SQS consumer polls and persists them.
+
+### Kafka (event streaming)
+
+Set `KAFKA_ENABLED=true` plus `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_TOPIC`, `KAFKA_CONSUMER_GROUP`. When enabled, delivery events are published to Kafka after persistence. A Kafka consumer handles Discord posting instead of the pipeline.
+
+See `SQS-KAFKA-PLAYBOOK.md` for full setup instructions.
+
 ## Troubleshooting
 
-- **No memes appearing?** Check that your subreddit env vars (`SR_1`, etc.) are set and the backend logs show successful Reddit fetches.
-- **Discord posting fails?** Verify `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID`. Make sure the bot has "Send Messages" permission in the channel.
+- **No memes appearing?** Check that at least one source is enabled (`meme.sources.reddit=true` or `meme.sources.giphy=true` in `application.yml`). Check backend logs for fetch errors.
+- **Discord posting fails?** Verify `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID`. Make sure the bot has "Send Messages" and "Embed Links" permissions in the channel.
 - **Frontend can't reach API?** Ensure the backend is running on port 8080. The Vite proxy forwards `/api` there.
-- **H2 console?** Disabled by default. Set `spring.h2.console.enabled=true` in `application.yml` if you need it.
+- **Reddit rate limiting?** The app handles per-subreddit failures gracefully — one failing subreddit won't kill the batch. If you see many `Connection reset` warnings, reduce the number of subreddits or increase the fetch interval.
+- **Title too long errors?** Fixed — the `title` column supports up to 500 characters and titles are truncated at the fetcher level.
+- **H2 console?** Disabled by default. Set `spring.h2.console.enabled=true` in `application.yml` if needed.

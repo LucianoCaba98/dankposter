@@ -19,6 +19,7 @@ public class SseEmitterService {
     public SseEmitterService() {
         emitters.put("ingestion", new CopyOnWriteArrayList<>());
         emitters.put("posted", new CopyOnWriteArrayList<>());
+        emitters.put("kafka-metrics", new CopyOnWriteArrayList<>());
     }
 
     public SseEmitter createEmitter(String channel) {

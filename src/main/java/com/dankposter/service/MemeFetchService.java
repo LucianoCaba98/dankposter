@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 
 @Service
@@ -15,6 +16,11 @@ import java.util.List;
 public class MemeFetchService {
 
     private final List<MemeSource> sources;
+
+    @PostConstruct
+    void logSources() {
+        log.info("Registered meme sources: {}", sources.stream().map(MemeSource::sourceName).toList());
+    }
 
     public Flux<Meme> fetch() {
         return Flux.fromIterable(sources)

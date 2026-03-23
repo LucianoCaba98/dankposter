@@ -34,9 +34,14 @@ public class WebClientConfig {
     public WebClient giphyClient(
             @Value("${giphy.api.key}") String apiKey) {
 
+        ExchangeStrategies giphyStrategies = ExchangeStrategies.builder()
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
+                .build();
+
         return WebClient.builder()
                 .baseUrl("https://api.giphy.com")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .exchangeStrategies(giphyStrategies)
                 .filter((req, next) -> {
                     URI uri = UriComponentsBuilder.fromUri(req.url())
                             .queryParam("api_key", apiKey)

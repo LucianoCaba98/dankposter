@@ -12,6 +12,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -31,14 +34,26 @@ public class GiphyMemeSource implements MemeSource {
         return giphyClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/v1/gifs/trending")
-                        .queryParam("limit", 25)
+                        .queryParam("limit", 50)
                         .queryParam("rating", "pg")
                         .queryParam("lang", "es")
                         .build())
                 .retrieve()
                 .bodyToMono(GiphyResponse.class)
-                .flatMapMany(resp -> Flux.fromIterable(resp.getData()))
-                .map(this::toMeme);
+                .flatMapMany(resp -> {
+                    if (resp == null || resp.getData() == null) {
+                        log.warn("Giphy returned null or empty response");
+                        return Flux.empty();
+                    }
+                    log.info("Fetched {} gifs from Giphy", resp.getData().size());
+                    return Flux.fromIterable(resp.getData());
+                })
+                .map(this::toMeme)
+                .filter(Objects::nonNull)
+                .onErrorResume(e -> {
+                    log.warn("Error fetching from Giphy: {}", e.getMessage());
+                    return Flux.empty();
+                });
     }
 
     @Override

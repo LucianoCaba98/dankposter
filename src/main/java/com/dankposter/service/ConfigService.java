@@ -38,7 +38,6 @@ public class ConfigService {
                 "region", sqsProperties.getRegion() != null ? sqsProperties.getRegion() : "",
                 "pollInterval", sqsProperties.getPollInterval() != null ? sqsProperties.getPollInterval().getSeconds() : 0L));
         config.put("kafka", Map.of(
-                "enabled", kafkaProperties.isEnabled(),
                 "bootstrapServers", kafkaProperties.getBootstrapServers() != null ? kafkaProperties.getBootstrapServers() : "",
                 "topic", kafkaProperties.getTopic() != null ? kafkaProperties.getTopic() : "",
                 "consumerGroup", kafkaProperties.getConsumerGroup() != null ? kafkaProperties.getConsumerGroup() : ""));
@@ -109,14 +108,9 @@ public class ConfigService {
     }
 
     private void updateKafka(Map<String, Object> values) {
-        boolean enabled = kafkaProperties.isEnabled();
-        if (values.containsKey("enabled")) enabled = toBoolean(values.get("enabled"));
-        if (enabled) {
-            String bs = values.containsKey("bootstrapServers") ? String.valueOf(values.get("bootstrapServers")).trim()
-                    : (kafkaProperties.getBootstrapServers() != null ? kafkaProperties.getBootstrapServers() : "");
-            if (bs.isEmpty()) throw new IllegalArgumentException("bootstrapServers must not be empty when Kafka is enabled");
-        }
-        if (values.containsKey("enabled")) kafkaProperties.setEnabled(enabled);
+        String bs = values.containsKey("bootstrapServers") ? String.valueOf(values.get("bootstrapServers")).trim()
+                : (kafkaProperties.getBootstrapServers() != null ? kafkaProperties.getBootstrapServers() : "");
+        if (bs.isEmpty()) throw new IllegalArgumentException("bootstrapServers must not be empty");
         if (values.containsKey("bootstrapServers")) kafkaProperties.setBootstrapServers(String.valueOf(values.get("bootstrapServers")).trim());
         if (values.containsKey("topic")) kafkaProperties.setTopic(String.valueOf(values.get("topic")).trim());
         if (values.containsKey("consumerGroup")) kafkaProperties.setConsumerGroup(String.valueOf(values.get("consumerGroup")).trim());

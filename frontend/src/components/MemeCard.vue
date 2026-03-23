@@ -1,33 +1,53 @@
 <template>
   <div class="meme-card" @click="expanded = true">
-    <h3 class="meme-title">{{ meme.title }}</h3>
-    <img
-      :src="imageSrc"
-      :alt="imageAlt"
-      class="meme-image"
-      @error="onImageError"
+    <video
+      v-if="isVideo"
+      :src="videoSrc"
+      class="meme-media"
+      muted
+      loop
+      autoplay
+      playsinline
+      @error="onMediaError"
     />
-    <div class="meme-meta">
-      <span class="dankness-score">🔥 {{ meme.danknessScore.toFixed(1) }}</span>
-      <span v-if="!hideStatus" :class="['posted-badge', meme.posted ? 'posted' : 'pending']">
-        {{ meme.posted ? 'Posted' : 'Pending' }}
-      </span>
+    <img
+      v-else
+      :src="mediaSrc"
+      :alt="meme.title"
+      class="meme-media"
+      loading="lazy"
+      @error="onMediaError"
+    />
+    <div class="meme-info">
+      <h3 class="meme-title">{{ meme.title }}</h3>
+      <div v-if="!hideStatus" class="meme-meta">
+        <span :class="['posted-badge', meme.posted ? 'posted' : 'pending']">
+          {{ meme.posted ? 'Posted' : 'Pending' }}
+        </span>
+        <span v-if="meme.source" class="source-badge">{{ meme.source }}</span>
+      </div>
     </div>
-    <p v-if="truncatedDescription" class="meme-description">{{ truncatedDescription }}</p>
 
-    <!-- Expanded overlay -->
     <Teleport to="body">
       <div v-if="expanded" class="overlay" @click.self="expanded = false">
         <div class="expanded-card">
           <button class="close-btn" @click.stop="expanded = false" aria-label="Close">&times;</button>
-          <img :src="imageSrc" :alt="imageAlt" class="expanded-image" />
+          <video
+            v-if="isVideo"
+            :src="videoSrc"
+            class="expanded-media"
+            controls
+            autoplay
+            loop
+          />
+          <img v-else :src="mediaSrc" :alt="meme.title" class="expanded-media" />
           <div class="expanded-info">
             <h3>{{ meme.title }}</h3>
-            <div class="expanded-meta">
-              <span class="dankness-score">🔥 {{ meme.danknessScore.toFixed(1) }}</span>
-              <span v-if="!hideStatus" :class="['posted-badge', meme.posted ? 'posted' : 'pending']">
+            <div v-if="!hideStatus" class="expanded-meta">
+              <span :class="['posted-badge', meme.posted ? 'posted' : 'pending']">
                 {{ meme.posted ? 'Posted' : 'Pending' }}
               </span>
+              <span v-if="meme.source" class="source-badge">{{ meme.source }}</span>
             </div>
             <p v-if="meme.description" class="expanded-description">{{ meme.description }}</p>
           </div>
@@ -45,27 +65,29 @@ const props = withDefaults(defineProps<{ meme: Meme; hideStatus?: boolean }>(), 
   hideStatus: false
 })
 const expanded = ref(false)
-const imageFailed = ref(false)
+const mediaFailed = ref(false)
 
-const imageSrc = computed(() =>
-  imageFailed.value
-    ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Crect fill="%231a1a2e" width="300" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23a0a0b8" font-size="14"%3EImage unavailable%3C/text%3E%3C/svg%3E'
+const isVideo = computed(() => {
+  const url = props.meme.imageUrl?.toLowerCase() ?? ''
+  return url.endsWith('.mp4') || url.endsWith('.gifv') || url.includes('v.redd.it')
+})
+
+const videoSrc = computed(() => {
+  const url = props.meme.imageUrl ?? ''
+  if (url.endsWith('.gifv')) return url.replace('.gifv', '.mp4')
+  if (url.includes('v.redd.it') && !url.includes('DASH')) return url + '/DASH_480.mp4'
+  return url
+})
+
+const mediaSrc = computed(() =>
+  mediaFailed.value
+    ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Crect fill="%231a1a2e" width="300" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23a0a0b8" font-size="14"%3EMedia unavailable%3C/text%3E%3C/svg%3E'
     : props.meme.imageUrl
 )
 
-const imageAlt = computed(() =>
-  imageFailed.value ? 'Meme image unavailable' : props.meme.title
-)
-
-function onImageError() {
-  imageFailed.value = true
+function onMediaError() {
+  mediaFailed.value = true
 }
-
-const truncatedDescription = computed(() => {
-  const desc = props.meme.description
-  if (!desc) return ''
-  return desc.length > 140 ? desc.slice(0, 140) + '...' : desc
-})
 </script>
 
 <style scoped>
@@ -76,65 +98,57 @@ const truncatedDescription = computed(() => {
   overflow: hidden;
   transition: border-color 0.2s;
   cursor: pointer;
+  break-inside: avoid;
 }
 
 .meme-card:hover {
   border-color: #3a3a5a;
 }
 
+.meme-media {
+  width: 100%;
+  display: block;
+}
+
+.meme-info {
+  padding: 10px 14px 12px;
+}
+
 .meme-title {
-  padding: 14px 16px 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #e0e0e0;
   line-height: 1.4;
 }
 
-.meme-image {
-  width: 100%;
-  display: block;
-  margin-top: 10px;
-  max-height: 400px;
-  object-fit: cover;
-}
-
 .meme-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-}
-
-.dankness-score {
-  font-size: 0.9rem;
-  color: #f0a040;
-  font-weight: 600;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .posted-badge {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.posted-badge.posted {
-  background-color: #1b4332;
-  color: #52b788;
-}
+.posted-badge.posted { background-color: #1b4332; color: #52b788; }
+.posted-badge.pending { background-color: #2a2a4a; color: #a0a0b8; }
 
-.posted-badge.pending {
+.source-badge {
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 8px;
   background-color: #2a2a4a;
-  color: #a0a0b8;
-}
-
-.meme-description {
-  padding: 0 16px 14px;
-  font-size: 0.85rem;
-  color: #a0a0b8;
-  line-height: 1.5;
+  color: #8080a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Overlay */
@@ -177,14 +191,11 @@ const truncatedDescription = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s;
 }
 
-.close-btn:hover {
-  background: rgba(0, 0, 0, 0.8);
-}
+.close-btn:hover { background: rgba(0, 0, 0, 0.8); }
 
-.expanded-image {
+.expanded-media {
   width: 100%;
   display: block;
   border-radius: 12px 12px 0 0;
@@ -193,9 +204,7 @@ const truncatedDescription = computed(() => {
   background: #0f0f1a;
 }
 
-.expanded-info {
-  padding: 16px 20px 20px;
-}
+.expanded-info { padding: 16px 20px 20px; }
 
 .expanded-info h3 {
   font-size: 1.1rem;
@@ -208,7 +217,7 @@ const truncatedDescription = computed(() => {
 .expanded-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 10px;
 }
 
@@ -218,13 +227,6 @@ const truncatedDescription = computed(() => {
   line-height: 1.6;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 </style>
