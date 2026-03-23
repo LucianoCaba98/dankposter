@@ -9,14 +9,6 @@
       </div>
     </div>
 
-    <div v-if="loading" class="feed-status">Loading…</div>
-
-    <div v-else-if="memes.length === 0" class="feed-status">No memes ingested yet</div>
-
-    <div v-else class="meme-grid">
-      <MemeCard v-for="meme in memes" :key="meme.id" :meme="meme" />
-    </div>
-
     <div class="queue-section">
       <div class="queue-header">
         <h2 class="queue-title">📋 Posting Queue ({{ queueMemes.length }})</h2>
@@ -24,6 +16,17 @@
       <div v-if="queueMemes.length === 0" class="feed-status">No memes queued for posting</div>
       <div v-else class="meme-grid">
         <MemeCard v-for="meme in queueMemes" :key="'queue-' + meme.id" :meme="meme" />
+      </div>
+    </div>
+
+    <div class="ingested-section">
+      <div class="ingested-header">
+        <h2 class="feed-title">📥 Ingested Memes</h2>
+      </div>
+      <div v-if="loading" class="feed-status">Loading…</div>
+      <div v-else-if="memes.length === 0" class="feed-status">No memes ingested yet</div>
+      <div v-else class="meme-grid">
+        <MemeCard v-for="meme in memes" :key="meme.id" :meme="meme" />
       </div>
     </div>
   </div>
@@ -112,9 +115,15 @@ onMounted(async () => {
 .meme-grid > * { margin-bottom: 20px; }
 
 .queue-section {
-  margin-top: 40px;
-  padding-top: 28px;
-  border-top: 2px solid #2a2a4a;
+  margin-bottom: 40px;
+  padding-bottom: 28px;
+  border-bottom: 2px solid #2a2a4a;
+}
+.ingested-section {
+  padding-top: 0;
+}
+.ingested-header {
+  margin-bottom: 20px;
 }
 .queue-header {
   margin-bottom: 20px;
