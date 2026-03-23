@@ -3,6 +3,7 @@ package com.dankposter.controller;
 import com.dankposter.dto.MemeDto;
 import com.dankposter.model.MemeStatus;
 import com.dankposter.repository.MemeRepository;
+import com.dankposter.service.LikeRescoreTracker;
 import com.dankposter.service.MemeIntercalator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/memes")
@@ -19,6 +21,7 @@ import java.util.Map;
 public class MemeController {
 
     private final MemeRepository memeRepository;
+    private final Optional<LikeRescoreTracker> likeRescoreTracker;
 
     @GetMapping("/posted")
     public Page<MemeDto> getPostedMemes(
@@ -55,6 +58,21 @@ public class MemeController {
         var fetched = memeRepository.findByStatus(MemeStatus.FETCHED);
         var intercalated = MemeIntercalator.intercalate(fetched);
         return intercalated.stream().map(MemeDto::fromEntity).toList();
+    }
+
+    @PatchMapping("/{id}/like")
+    public ResponseEntity<MemeDto> toggleLike(@PathVariable Long id) {
+        return memeRepository.findById(id)
+                .map(meme -> {
+                    boolean wasLiked = meme.isLiked();
+                    meme.setLiked(!wasLiked);
+                    var saved = memeRepository.save(meme);
+                    if (!wasLiked) {
+                        likeRescoreTracker.ifPresent(LikeRescoreTracker::recordLike);
+                    }
+                    return ResponseEntity.ok(MemeDto.fromEntity(saved));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")

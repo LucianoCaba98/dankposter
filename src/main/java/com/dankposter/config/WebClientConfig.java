@@ -56,6 +56,18 @@ public class WebClientConfig {
     }
 
     @Bean
+    public WebClient d3vdClient() {
+        ExchangeStrategies strategies = ExchangeStrategies.builder()
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
+                .build();
+
+        return WebClient.builder()
+                .baseUrl("https://meme-api.com")
+                .exchangeStrategies(strategies)
+                .build();
+    }
+
+    @Bean
     public WebClient discordClient(DiscordConfig discordConfig) {
         return WebClient.builder()
                 .baseUrl("https://discord.com/api/v10")

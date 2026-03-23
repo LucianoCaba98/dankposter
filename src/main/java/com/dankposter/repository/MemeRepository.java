@@ -14,4 +14,5 @@ public interface MemeRepository extends JpaRepository<Meme, Long> {
     Page<Meme> findAllByOrderByIdDesc(Pageable pageable);
     List<Meme> findByStatus(MemeStatus status);
     long countByStatus(MemeStatus status);
+    List<Meme> findByLikedTrue();
 }
