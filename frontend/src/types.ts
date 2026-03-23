@@ -6,6 +6,7 @@ export interface Meme {
   posted: boolean
   description: string | null
   source: string | null
+  liked: boolean
 }
 
 export interface ConfigCategory {

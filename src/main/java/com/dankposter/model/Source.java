@@ -2,5 +2,6 @@ package com.dankposter.model;
 
 public enum Source {
     GIPHY,
-    REDDIT
+    REDDIT,
+    D3VD
 }

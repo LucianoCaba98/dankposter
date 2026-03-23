@@ -7,7 +7,7 @@
     <div v-else-if="memes.length === 0" class="feed-status">No posted memes yet</div>
 
     <div v-else class="meme-grid">
-      <MemeCard v-for="meme in memes" :key="meme.id" :meme="meme" :hide-status="true" />
+      <MemeCard v-for="meme in memes" :key="meme.id" :meme="meme" :hide-status="true" show-actions @discard="onDiscard" />
     </div>
   </div>
 </template>
@@ -28,6 +28,10 @@ watch(lastEvent, (newMeme) => {
     memes.value = [newMeme, ...memes.value]
   }
 })
+
+function onDiscard(id: number) {
+  memes.value = memes.value.filter(m => m.id !== id)
+}
 
 onMounted(async () => {
   try {

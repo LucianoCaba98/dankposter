@@ -9,31 +9,45 @@
       </div>
     </div>
 
-    <div class="queue-section">
-      <div class="queue-header">
-        <h2 class="queue-title">📋 Posting Queue ({{ queueMemes.length }})</h2>
+    <div class="section">
+      <div class="section-header" @click="queueExpanded = !queueExpanded">
+        <span class="chevron">{{ queueExpanded ? '▼' : '▶' }}</span>
+        <h2 class="section-title queue-accent">📋 Posting Queue ({{ queueMemes.length }})</h2>
       </div>
-      <div v-if="queueMemes.length === 0" class="feed-status">No memes queued for posting</div>
-      <div v-else class="meme-grid">
-        <MemeCard v-for="meme in queueMemes" :key="'queue-' + meme.id" :meme="meme" />
+      <div v-show="queueExpanded" class="section-content">
+        <div v-if="queueMemes.length === 0" class="feed-status">No memes queued for posting</div>
+        <div v-else class="meme-row">
+          <MemeCard
+            v-for="meme in displayQueue"
+            :key="'q-' + meme.id"
+            :meme="meme"
+          />
+        </div>
       </div>
     </div>
 
-    <div class="ingested-section">
-      <div class="ingested-header">
-        <h2 class="feed-title">📥 Ingested Memes</h2>
+    <div class="section">
+      <div class="section-header" @click="ingestedExpanded = !ingestedExpanded">
+        <span class="chevron">{{ ingestedExpanded ? '▼' : '▶' }}</span>
+        <h2 class="section-title">📥 Ingested Memes</h2>
       </div>
-      <div v-if="loading" class="feed-status">Loading…</div>
-      <div v-else-if="memes.length === 0" class="feed-status">No memes ingested yet</div>
-      <div v-else class="meme-grid">
-        <MemeCard v-for="meme in memes" :key="meme.id" :meme="meme" />
+      <div v-show="ingestedExpanded" class="section-content">
+        <div v-if="loading" class="feed-status">Loading…</div>
+        <div v-else-if="memes.length === 0" class="feed-status">No memes ingested yet</div>
+        <div v-else class="meme-row">
+          <MemeCard
+            v-for="meme in displayMemes"
+            :key="meme.id"
+            :meme="meme"
+          />
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import type { Meme } from '../types'
 import { useSse } from '../composables/useSse'
 import MemeCard from '../components/MemeCard.vue'
@@ -43,6 +57,11 @@ const queueMemes = ref<Meme[]>([])
 const loading = ref(true)
 const ingestedCount = ref(0)
 const postedCount = ref(0)
+const queueExpanded = ref(true)
+const ingestedExpanded = ref(true)
+
+const displayQueue = computed(() => queueMemes.value.slice(0, 10))
+const displayMemes = computed(() => memes.value.slice(0, 10))
 
 const { lastEvent: ingestionEvent } = useSse('/api/events/ingestion')
 const { lastEvent: postedEvent } = useSse('/api/events/posted')
@@ -50,9 +69,7 @@ const { lastEvent: postedEvent } = useSse('/api/events/posted')
 async function fetchQueue() {
   try {
     const res = await fetch('/api/memes/queue')
-    if (res.ok) {
-      queueMemes.value = await res.json()
-    }
+    if (res.ok) queueMemes.value = await res.json()
   } catch (e) {
     console.error('Failed to fetch posting queue:', e)
   }
@@ -70,9 +87,7 @@ watch(postedEvent, (postedMeme) => {
   if (postedMeme) {
     postedCount.value++
     const idx = memes.value.findIndex(m => m.id === postedMeme.id)
-    if (idx !== -1) {
-      memes.value[idx] = { ...memes.value[idx], posted: true }
-    }
+    if (idx !== -1) memes.value[idx] = { ...memes.value[idx], posted: true }
   }
   fetchQueue()
 })
@@ -110,27 +125,27 @@ onMounted(async () => {
 .ingested-counter { color: #64b5f6; }
 .posted-counter { color: #52b788; }
 .counter-divider { color: #4a4a6a; }
-.feed-status { text-align: center; color: #a0a0b8; padding: 48px 0; font-size: 1rem; }
-.meme-grid { columns: 3 300px; column-gap: 20px; }
-.meme-grid > * { margin-bottom: 20px; }
+.feed-status { text-align: center; color: #a0a0b8; padding: 32px 0; font-size: 1rem; }
 
-.queue-section {
-  margin-bottom: 40px;
-  padding-bottom: 28px;
-  border-bottom: 2px solid #2a2a4a;
+.section { margin-bottom: 24px; border: 1px solid #2a2a4a; border-radius: 10px; background: #0f0f1a; overflow: hidden; }
+.section-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; user-select: none; }
+.section-header:hover { background: rgba(187, 134, 252, 0.05); }
+.chevron { font-size: 0.8rem; color: #a0a0b8; width: 16px; }
+.section-title { font-size: 1.2rem; font-weight: 700; color: #e0e0e0; }
+.queue-accent { color: #bb86fc; }
+.section-content { padding: 0 16px 16px; }
+
+.meme-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.ingested-section {
-  padding-top: 0;
-}
-.ingested-header {
-  margin-bottom: 20px;
-}
-.queue-header {
-  margin-bottom: 20px;
-}
-.queue-title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #bb86fc;
-}
+.meme-row::-webkit-scrollbar { display: none; }
+.meme-row > * { flex-shrink: 0; width: 160px; min-width: 160px; }
+.meme-row :deep(.meme-media) { height: 120px; object-fit: cover; }
+.meme-row :deep(.meme-info) { padding: 4px 8px 6px; }
+.meme-row :deep(.meme-title) { font-size: 0.7rem; }
 </style>

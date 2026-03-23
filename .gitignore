@@ -45,3 +45,6 @@ src/main/resources/application.yml
 ### Frontend ###
 frontend/node_modules/
 frontend/dist/
+
+### Snapshot ###
+dankposter-state.json

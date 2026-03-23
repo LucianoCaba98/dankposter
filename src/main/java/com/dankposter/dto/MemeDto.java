@@ -11,7 +11,8 @@ public record MemeDto(
         Double danknessScore,
         boolean posted,
         String description,
-        String source
+        String source,
+        boolean liked
 ) {
     public static MemeDto fromEntity(Meme meme) {
         return new MemeDto(
@@ -22,7 +23,8 @@ public record MemeDto(
                 meme.getDanknessScore(),
                 meme.getStatus() == MemeStatus.POSTED,
                 meme.getDescription(),
-                meme.getSource() != null ? meme.getSource().name() : null
+                meme.getSource() != null ? meme.getSource().name() : null,
+                meme.isLiked()
         );
     }
 }

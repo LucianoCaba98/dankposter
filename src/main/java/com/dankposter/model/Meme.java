@@ -37,6 +37,10 @@ public class Meme {
     @Lob
     private String description;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean liked = false;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
